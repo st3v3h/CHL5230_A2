@@ -74,7 +74,10 @@ for (i in 1:5){
   l.mod <- glmnet(x.train,y.train,family="binomial",alpha=1) # LASSO regression
   #use cross validation to fine the optimal lambda
   cv.l <- cv.glmnet(x.train,y.train,alpha=1, family="binomial", type.measure = "mse") 
+  coef.min.l <- coef(cv.l, s = "lambda.min")
+  coef.min.l
 
+  #test the model using optimal lambda
   predictions <- predict(l.mod, newx = x.test, type = "class", s= cv.l$lambda.min)
 
   #measure accuracy
@@ -121,6 +124,7 @@ for(i in 1:5){
 
   #select k with highest accuracy 
   k.opt <- max(which(acc.j==max(acc.j))) 
+  #plot(acc.j,type="l",xlab = "k") 
 
   #create model with optimal k
   predictions <- knn(train.data,test.data,labels.train,k=k.opt)
@@ -145,8 +149,8 @@ for (i in 1:5){
   #train the tree model with training data
   train.I <- sample(nrow(cland.cl),nrow(cland.cl)*2/3)
   tmp.tree <- tree(num ~. , data = cland.cl,subset=train.I)
-  #plot(tmp.tree)
-  #text(tmp.tree, pretty = 0)
+  # plot(tmp.tree)
+  # text(tmp.tree, pretty = 0)
   
   #prune the tree
   cv.train <- cv.tree(tmp.tree, FUN=prune.tree, method = "misclass", K = 5)
@@ -167,7 +171,7 @@ for (i in 1:5){
 
 #gather accuracies from all models into dataframe and compare
 all.acc <- data.frame(LASSO=acc.l, KNN=acc.k, TREE=acc.t)
-boxplot(all.acc, ylab="accuracy")
+boxplot(all.acc, ylab="accuracy", xlab="method")
 summary(all.acc)
 
 #perform ANOVA to check for significant differences
@@ -176,3 +180,11 @@ m.acc <- melt(all.acc)
 a1 <- aov(value~variable, data=m.acc)
 summary(a1) #no significant differences
 
+####################################
+######## MODEL SELECTION ###########
+####################################
+
+l.mod.fin <- glmnet(x,y,family="binomial",alpha=1) # LASSO regression
+cv.l.fin <- cv.glmnet(x,y,alpha=1, family="binomial", type.measure = "mse") 
+coef.min.l <- coef(cv.l.fin, s = "lambda.min")
+coef.min.l
