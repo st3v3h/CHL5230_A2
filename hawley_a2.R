@@ -40,6 +40,7 @@ cland$ca <- factor(cland$ca, levels = c("0.0","1.0","2.0","3.0"))
 #drop missing values
 cland.cl <- na.omit(cland)
 
+
 #review cleaned data
 str(cland.cl)
 dfSummary(cland.cl)
@@ -66,10 +67,10 @@ for (i in 1:5){
   y.test <- test$num
   
   l.mod <- glmnet(x.train,y.train,family="binomial",alpha=1) # LASSO regression
-  cv.l <- cv.glmnet(x.train,y.train,alpha=1, family="binomial") #optimal lambda
-  coef.min.l <- coef(cv.l, s = "lambda.min") # coefficients with optimal lambda
+  cv.l <- cv.glmnet(x.train,y.train,alpha=1, family="binomial", type.measure = "mse") #optimal lambda
+  #coef.min.l <- coef(cv.l, s = "lambda.min") # coefficients with optimal lambda
   
-  predictions <- predict(cv.l, newx = x.test, type = "class", s= cv.l$lambda.min)
+  predictions <- predict(l.mod, newx = x.test, type = "class", s= cv.l$lambda.min)
 
   t <- table(predictions, y.test)[2:1,2:1]
   epi.tests(t)
@@ -107,8 +108,16 @@ x <- model.matrix(num ~.,cland.cl)[,-1]
 y <- cland.cl$num
 
 x.sc <- scale(x)
+ 
+# for (j in 1:50){ 
+#   predictions <- knn.cv(x.sc,y,k=j) 
+#   t <- table(predictions, y)[2:1,2:1] 
+#   acc[j] <- sum(diag(t))/sum(t) 
+#   }
+# k.opt <- max(which(acc==max(acc))) 
 
 set.seed(10)
+acc.j <- c()
 acc.k <- c()
 
 for(i in 1:5){
@@ -119,7 +128,15 @@ test.data <- x.sc[-train.I,]
 labels.train <- y[train.I]
 labels.test <- y[-train.I]
 
-predictions <- knn(train.data,test.data,labels.train,k=5)
+for (j in 1:50){ 
+  predictions <- knn.cv(train.data,y[train.I],k=j) 
+  t <- table(predictions, y[train.I])[2:1,2:1] 
+  acc.j[j] <- sum(diag(t))/sum(t) 
+}
+
+k.opt <- max(which(acc.j==max(acc.j))) 
+
+predictions <- knn(train.data,test.data,labels.train,k=k.opt)
 t <- table(predictions, labels.test)[2:1,2:1]
 t
 epi.tests(t)
@@ -168,14 +185,14 @@ acc.t <- c()
 for (i in 1:5){
   train.I <- sample(nrow(cland.cl),nrow(cland.cl)*2/3)
   tmp.tree <- tree(num ~. , data = cland.cl,subset=train.I)
-  plot(tmp.tree)
-  text(tmp.tree, pretty = 0)
+  #plot(tmp.tree)
+  #text(tmp.tree, pretty = 0)
   
   #prune the tree
   cv.train <- cv.tree(tmp.tree, FUN=prune.tree, method = "misclass", K = 5)
   pruned.train <- prune.misclass(tmp.tree,best=5) 
-  plot(pruned.train)
-  text(pruned.train,pretty=0)
+  #plot(pruned.train)
+  #text(pruned.train,pretty=0)
   
   #test the model with test data
   preds3 <- predict(pruned.train,newdata=cland.cl[-train.I,],type="class")
@@ -188,6 +205,8 @@ for (i in 1:5){
 
 all.acc <- data.frame(LASSO=acc.l, KNN=acc.k, TREE=acc.t)
 boxplot(all.acc, ylab="accuracy")
+summary(all.acc)
+
 
 library(reshape2)
 m.acc <- melt(all.acc)
