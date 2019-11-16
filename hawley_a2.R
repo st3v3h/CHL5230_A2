@@ -143,20 +143,24 @@ set.seed(10)
 
 #create empty vector to hold tree accuracies
 acc.t <- c()
-
+bs <- c()
 #repeat validation 5 times
 for (i in 1:5){
   #train the tree model with training data
   train.I <- sample(nrow(cland.cl),nrow(cland.cl)*2/3)
   tmp.tree <- tree(num ~. , data = cland.cl,subset=train.I)
-  # plot(tmp.tree)
-  # text(tmp.tree, pretty = 0)
+   plot(tmp.tree)
+   text(tmp.tree, pretty = 0)
   
-  #prune the tree
+  #use cross validation to determine best size and prune the tree
   cv.train <- cv.tree(tmp.tree, FUN=prune.tree, method = "misclass", K = 5)
-  pruned.train <- prune.misclass(tmp.tree,best=5) 
-  #plot(pruned.train)
-  #text(pruned.train,pretty=0)
+  plot(cv.train)
+  best.size <- cv.train$size[which(cv.train$dev==min(cv.train$dev))]
+  #collect tree sizes
+  bs[i] <- best.size 
+  pruned.train <- prune.misclass(tmp.tree,best=best.size) 
+  plot(pruned.train)
+  text(pruned.train,pretty=0)
   
   #test the pruned model with test data
   preds3 <- predict(pruned.train,newdata=cland.cl[-train.I,],type="class")
@@ -178,13 +182,14 @@ summary(all.acc)
 library(reshape2)
 m.acc <- melt(all.acc)
 a1 <- aov(value~variable, data=m.acc)
-summary(a1) #no significant differences
+summary(a1) 
+TukeyHSD(a1)
 
 ####################################
 ######## MODEL SELECTION ###########
 ####################################
 
-l.mod.fin <- glmnet(x,y,family="binomial",alpha=1) # LASSO regression
+l.mod.fin <- glmnet(x,y,family="binomial",alpha=1) 
 cv.l.fin <- cv.glmnet(x,y,alpha=1, family="binomial", type.measure = "mse") 
 coef.min.l <- coef(cv.l.fin, s = "lambda.min")
 coef.min.l
