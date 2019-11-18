@@ -178,18 +178,28 @@ all.acc <- data.frame(LASSO=acc.l, KNN=acc.k, TREE=acc.t)
 boxplot(all.acc, ylab="accuracy", xlab="method")
 summary(all.acc)
 
-#perform ANOVA to check for significant differences
+#perform friedman test to check for significant differences
 library(reshape2)
+id <- rownames(all.acc)
+all.acc <- cbind(id=id, all.acc)
 m.acc <- melt(all.acc)
-a1 <- aov(value~variable, data=m.acc)
-summary(a1) 
-TukeyHSD(a1)
+friedman.test(value~ variable | id, data = m.acc)
+# a1 <- aov(value~variable + Error(id/variable), data=m.acc)
+# summary(a1) 
+# TukeyHSD(a1)
 
 ####################################
 ######## MODEL SELECTION ###########
 ####################################
 
+#train model with full data set
 l.mod.fin <- glmnet(x,y,family="binomial",alpha=1) 
+#apply regularization
 cv.l.fin <- cv.glmnet(x,y,alpha=1, family="binomial", type.measure = "mse") 
+#get coefficients
 coef.min.l <- coef(cv.l.fin, s = "lambda.min")
 coef.min.l
+
+#example prediction
+predict(l.mod.fin, newx = head(x,1), type = "class", s= cv.l$lambda.min)
+
