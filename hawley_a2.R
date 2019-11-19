@@ -201,5 +201,16 @@ coef.min.l <- coef(cv.l.fin, s = "lambda.min")
 coef.min.l
 
 #example prediction
-predict(l.mod.fin, newx = head(x,1), type = "class", s= cv.l$lambda.min)
+#use a previously exluded observation for example
+ndf <-cland[288,]
+ndf[is.na(ndf)] <- "0.0"
+ndf.x <- as.matrix(model.matrix(num ~.,ndf)[,-1])
+ndf.x <- t(ndf.x)
+
+#prediction
+predict(l.mod.fin, newx = ndf.x, type = "class", s= cv.l$lambda.min)
+#actual
+ndf$num[1]
+
+
 
